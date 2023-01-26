@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		664FB9DB29821D9F00CA2EC6 /* BitmojiViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 664FB9DA29821D9F00CA2EC6 /* BitmojiViewer.swift */; };
 		6657E8F7297BD70A00A9A9D6 /* Bitmoji_DownloaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6657E8F6297BD70A00A9A9D6 /* Bitmoji_DownloaderApp.swift */; };
 		6657E8F9297BD70A00A9A9D6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6657E8F8297BD70A00A9A9D6 /* ContentView.swift */; };
 		6657E8FB297BD70B00A9A9D6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6657E8FA297BD70B00A9A9D6 /* Assets.xcassets */; };
@@ -34,6 +35,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		664FB9DA29821D9F00CA2EC6 /* BitmojiViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitmojiViewer.swift; sourceTree = "<group>"; };
 		6657E8F3297BD70A00A9A9D6 /* Bitmoji Downloader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bitmoji Downloader.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6657E8F6297BD70A00A9A9D6 /* Bitmoji_DownloaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bitmoji_DownloaderApp.swift; sourceTree = "<group>"; };
 		6657E8F8297BD70A00A9A9D6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -97,6 +99,7 @@
 			children = (
 				6657E8F6297BD70A00A9A9D6 /* Bitmoji_DownloaderApp.swift */,
 				6657E8F8297BD70A00A9A9D6 /* ContentView.swift */,
+				664FB9DA29821D9F00CA2EC6 /* BitmojiViewer.swift */,
 				6657E8FA297BD70B00A9A9D6 /* Assets.xcassets */,
 				6657E8FF297BD70B00A9A9D6 /* Bitmoji_Downloader.entitlements */,
 				6657E8FC297BD70B00A9A9D6 /* Preview Content */,
@@ -261,6 +264,7 @@
 			files = (
 				6657E8F9297BD70A00A9A9D6 /* ContentView.swift in Sources */,
 				6657E8F7297BD70A00A9A9D6 /* Bitmoji_DownloaderApp.swift in Sources */,
+				664FB9DB29821D9F00CA2EC6 /* BitmojiViewer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,6 +419,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = "Bitmoji Downloader/Bitmoji_Downloader.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -442,6 +447,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = "Bitmoji Downloader/Bitmoji_Downloader.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;

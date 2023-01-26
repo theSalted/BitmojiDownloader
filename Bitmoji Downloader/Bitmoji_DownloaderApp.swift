@@ -12,6 +12,8 @@ struct Bitmoji_DownloaderApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .fixedSize()
         }
+        .windowResizability(.contentSize)
     }
 }

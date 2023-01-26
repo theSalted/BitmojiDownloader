@@ -7,91 +7,127 @@
 
 import SwiftUI
 
+
+
+
 struct ContentView: View {
     
-    @State var image: NSImage = NSImage()
-    let parameter = "nose"
-    @State var value = 1491
+    @State var baseUrlString = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=1&style=5"
+    
+    @State private var selectedParameter = BitmojiParameter.Nose
+    
+    @State private var saveLocation : URL?
+    
+    @State private var startValue = 0
+    @State private var endValue = 9999
+    
+    let defaultBaseUrl = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=1&style=5"
     
     var body: some View {
-        VStack {
-            
-            // Display image
-            Image(nsImage: image)
-            
-            // Image forward and backward
-            HStack {
-                
-                // minus value by 1
-                Button {
-                    Task {
-                        value -= 1
-                        let urlString = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=2&style=5&hair=1303&" + parameter + "=" + String(value)
-                        image = try await fetchImage(from: URL(string: urlString)!)
-                    }
-                } label: {
-                    Text("Previous")
-                }
-
-                Text(parameter + ": " + String(value))
-                
-                // add value by 1
-                Button {
-                    Task {
-                        value += 1
-                        let urlString = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=2&style=5&hair=1303&" + parameter + "=" + String(value)
-                        image = try await fetchImage(from: URL(string: urlString)!)
+        NavigationStack {
+            VStack {
+                Form {
+                    Section {
                         
+                        TextField("Base URL:", text: $baseUrlString)
+                        Button("Restore to default") {
+                            baseUrlString = defaultBaseUrl
+                        }
+                        .disabled(baseUrlString == defaultBaseUrl)
                     }
-                } label: {
-                    Text("Next")
-                }
-            }
-            
-            Button("Save Image") {
-                if let url = showSavePanel() {
-                    savePNG(image: image, path: url)
-                }
-            }
-            
-            Button("Hair Brute Force") {
-                
-                var fetchedImage : NSImage = NSImage()
-                
-                // Get save permission
-                if var url = showSavePanel() {
-                    Task {
-                        for index in 0...9999 {
-                            do {
-                                // URL brute forcing and fetching
-                                let urlString = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=2&style=5&hair=1303&nose=" + String(index)
-                                fetchedImage = try await fetchImage(from: URL(string: urlString)!)
-                                
-                                // URL saving
-                                url = url.deletingLastPathComponent()
-                                url.appendPathComponent("\(index).png")
-                                savePNG(image: fetchedImage, path: url)
-                                print("\(index) saved succeefully")
+                    
+                    Section {
+                        Picker("Parameters:", selection: $selectedParameter) {
+                            ForEach(BitmojiParameter.allCases) { parameter in
+                                Text(parameter.rawValue)
+                                    .tag(parameter)
                             }
-                            catch
-                            {
-                                print("\(index) no valid data")
-                            }
-                            
                         }
                     }
+                    
+                    Section {
+                        TextField("Start Value:", value: $startValue, format: .number)
+                        TextField("End Value:", value: $endValue, format: .number)
+                    }
+                    
+                    Divider()
+                    
+                    Section {
+                        Button {
+                            saveLocation = showOpenPanel()
+                        } label: {
+                            Label("Save Location", systemImage: "folder")
+                        }
+
+                    }
+                    
                 }
             }
-            
-        }
-        .padding()
-        .onAppear {
-            Task {
-                image = try await fetchImage(from: URL(string: "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=2&style=5&hair=1303")!)
+            .navigationTitle("Bitmoji Downloader")
+            .toolbarBackground(Color.accentColor)
+            .toolbar{
+                ToolbarItem(id: "download", placement: .primaryAction) {
+                    Button {
+                        var fetchedImage : NSImage = NSImage()
+                        
+                        // Get save permission
+                        var url : URL
+                        
+                        if saveLocation != nil {
+                            url = saveLocation!
+                        } else {
+                            url = showOpenPanel()!
+                        }
+                        
+                        // Create Download Task
+                        Task {
+                            for index in startValue...endValue {
+                                do {
+                                    // URL brute forcing and fetching
+                                    let urlString = baseUrlString + "&" + selectedParameter.rawValue + "=" + String(index)
+                                    fetchedImage = try await fetchImage(from: URL(string: urlString)!)
+                                    
+                                    // URL saving
+                                    url.appendPathComponent("\(index).png")
+                                    savePNG(image: fetchedImage, path: url)
+                                    url = url.deletingLastPathComponent()
+                                    print("\(index) saved succeefully")
+                                }
+                                catch
+                                {
+                                    print("\(index) no valid data")
+                                }
+                                
+                            }
+                        }
+                        
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
+                        Text("Start Download")
+                    }
+                }
             }
-            
+
+            .padding()
         }
     }
+}
+
+
+
+
+enum BitmojiParameter : String, Identifiable, CaseIterable {
+    
+    case Ear = "ear",
+         Eye = "eye",
+         FaceProportion = "face_proportion",
+         Hair = "hair",
+         Jaw = "jaw",
+         Mouth = "mouth",
+         Nose = "nose",
+         Pupil = "pupil"
+    
+    var id: String {self.rawValue}
 }
 
 // Get save directory and path from user
@@ -107,6 +143,21 @@ func showSavePanel() -> URL? {
     
     let response = savePanel.runModal()
     return response == .OK ? savePanel.url : nil
+}
+
+// Get save directory and path from user (can't select file)
+func showOpenPanel() -> URL? {
+    
+    let openPanel = NSOpenPanel()
+    openPanel.canCreateDirectories = true
+    openPanel.canChooseDirectories = true
+    openPanel.canChooseFiles = false
+    openPanel.title = "Save your images"
+    openPanel.message = "Choose a folder to store the image."
+    openPanel.nameFieldLabel = "Image file name:"
+    
+    let response = openPanel.runModal()
+    return response == .OK ? openPanel.url : nil
 }
 
 // Convert image to png and save
@@ -146,6 +197,8 @@ func fetchImage(from url: URL) async throws -> NSImage {
     
     return image
 }
+
+
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
