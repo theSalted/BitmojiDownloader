@@ -6,9 +6,7 @@
 //
 
 import SwiftUI
-
-
-
+import AVFoundation
 
 struct ContentView: View {
     
@@ -17,6 +15,7 @@ struct ContentView: View {
     @State private var selectedParameter = BitmojiParameter.Nose
     @State private var startValue = 0
     @State private var endValue = 9999
+    
     let defaultBaseUrl = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=1&style=5"
     
     var body: some View {
@@ -25,7 +24,7 @@ struct ContentView: View {
                 Image("Icon")
                     .resizable()
                     .scaledToFit()
-                    .frame(minHeight: 50, maxHeight: 200)
+                    .frame(maxHeight: 300)
                 Text("welcome to")
                     .font(Font.system(.title2).smallCaps())
                 Text("Bitmoji Downloader")
@@ -66,9 +65,10 @@ struct ContentView: View {
                         } label: {
                             Label("Save Location", systemImage: "folder")
                         }
+                        Text(saveLocation?.absoluteString ?? "")
+                            .font(.caption)
 
                     }
-                    
                 }
             }
             .navigationTitle("Bitmoji Downloader")
@@ -78,13 +78,13 @@ struct ContentView: View {
                     
                     NavigationLink {
                         DownloadView(parameter: selectedParameter.rawValue, startValue: startValue, endValue: endValue, baseUrlString: baseUrlString, saveLocation: saveLocation)
-                            .fixedSize()
                     } label: {
                         Image(systemName: "square.and.arrow.down")
                         Text("Start Download")
                     }
                 }
             }
+            .frame(minWidth: 500, minHeight:  500)
             .padding()
         }
     }
@@ -96,38 +96,99 @@ struct DownloadView: View {
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @State private var tasksCompleted = 0.0
     @State private var taskCompleteCount = 0
+    @State private var succeedCount = 0
+    @State private var failedCount = 0
     @State private var valueLog : [valueItem] = []
     @State private var isBatchComplete = false
+    @State private var isSFXEnable = true
     
     var parameter: String
     var startValue: Int
     var endValue: Int
     var baseUrlString: String
-    var saveLocation: URL?
+    @State var saveLocation: URL?
     
     var body: some View {
         VStack {
             ProgressView(value: tasksCompleted, total: Double(endValue - startValue))
-            Text("Fetching image (\(taskCompleteCount)/\(endValue))...")
+            
+            
+            
+            VStack(alignment: .leading) {
+                
+                Text("Information")
+                    .font(.title3)
+                    .bold()
+                
+                Divider()
+                
+                HStack {
+                    Label {
+                        Text("Completion")
+                    } icon: {
+                        Image(systemName: "circle.dashed")
+                            .foregroundColor(.blue)
+                    }
+                    Spacer()
+                    Text("(\(taskCompleteCount)/\(endValue))")
+                }
+                
+                Divider()
+                
+                HStack {
+                    Label {
+                        Text("Succeed")
+                    } icon: {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(.green)
+                    }
+                    Spacer()
+                    Text(String(succeedCount))
+                }
+                
+                Divider()
+                
+                HStack {
+                    Label {
+                        Text("Failed")
+                    } icon: {
+                        Image(systemName: "exclamationmark.octagon.fill")
+                            .foregroundColor(.red)
+                    }
+                    Spacer()
+                    Text(String(failedCount))
+                }
+                
+                Divider()
+                
+                HStack {
+                    Label("Parameter", systemImage: "slider.horizontal.3")
+                    Spacer()
+                    Text(String(parameter))
+                }
+            }
             List{
                 ForEach(valueLog.reversed()) { log in
                     VStack(alignment: .leading) {
-                        Text(log.valid ? "Fetch Successful" : "Fetch Failed")
+                        Label(log.valid ? "Fetch Successful" : "Fetch Failed", systemImage: log.valid ? "checkmark.seal.fill" : "exclamationmark.octagon.fill")
                             .font(.headline)
+                            .foregroundColor(log.valid ? .green : .red)
                         Text("value \(log.id)")
                             .font(.caption)
                     }
                     .listRowSeparator(.visible)
                 }
             }
-            .frame(minWidth: 500, minHeight: 100)
+            .frame(minHeight: 100)
             Divider()
             HStack {
                 Button {
                     do {
                         let jsonData = try JSONEncoder().encode(valueLog)
                         let savePath = showSaveJsonPanel()
-                        try jsonData.write(to: savePath!)
+                        if let validPath = savePath {
+                            try jsonData.write(to: validPath)
+                        }
                     } catch {
                         
                     }
@@ -137,14 +198,41 @@ struct DownloadView: View {
                 .disabled(!isBatchComplete)
                 Spacer()
             }
+            
+            HStack {
+                Button {
+                    if let filePath = saveLocation {
+                        NSWorkspace.shared.open(filePath)
+                    }
+                    
+                } label: {
+                    Label("Show In Finder", systemImage: "folder")
+                }
+                Spacer()
+            }
+            
         }
+        .frame(minWidth: 500, minHeight:  500)
         .padding()
         .navigationTitle("Downloading")
         .toolbarBackground(Color.accentColor)
         .navigationBarBackButtonHidden(!isBatchComplete)
         .toolbar{
-            ToolbarItem(id: "stop", placement: .primaryAction) {
+            ToolbarItem(id: "soundToggle", placement: .automatic) {
+                HStack {
+                    Image(systemName: isSFXEnable ? "speaker.wave.3.fill" : "speaker.slash.fill")
+                    Toggle("Sound", isOn: $isSFXEnable)
+                    .toggleStyle(.switch)
+                    .onChange(of: isSFXEnable) { value in
+                        if value {
+                            NSSound(named: "Glass")?.play()
+                        }
+                    }
+                }
+            }
+            ToolbarItem(id: "stop", placement: .automatic) {
                 Button {
+                    isSFXEnable = false
                     self.presentationMode.wrappedValue.dismiss()
                 } label: {
                     Image(systemName: "xmark.octagon.fill")
@@ -152,6 +240,7 @@ struct DownloadView: View {
                 }
                 .disabled(isBatchComplete)
             }
+            
         }
         .task {
             
@@ -161,6 +250,7 @@ struct DownloadView: View {
                 savePath = saveLocation!
             } else {
                 savePath = showOpenPanel() ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+                saveLocation = savePath
             }
             
             for value in startValue...endValue {
@@ -178,16 +268,19 @@ struct DownloadView: View {
                     savePNG(image: fetchedImage, path: saveURL)
                     
                     valueLog.append(valueItem(id: value, valid: true, url: downloadURL.absoluteString))
-                    print("\(value) saved successfully")
+                    succeedCount += 1
                     
                 } catch {
                     valueLog.append(valueItem(id: value, valid: false, url: nil))
-                    print("\(value) no valid data")
+                    failedCount += 1
                 }
                 
                 if tasksCompleted < Double(endValue - startValue) {
                     tasksCompleted += 1
                 }
+            }
+            if isSFXEnable {
+                NSSound(named: "Funk")?.play()
             }
             isBatchComplete = true
         }
