@@ -12,62 +12,224 @@ struct ContentView: View {
     
     @State private var baseUrlString = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=1&style=5"
     @State private var saveLocation : URL?
+    @State private var logLocation : URL?
     @State private var selectedParameter = BitmojiParameter.Nose
     @State private var startValue = 0
     @State private var endValue = 9999
+    @State private var log : [valueItem]?
+    @State private var showValid = true
+    @State private var showInvalid = true
+    @State private var showLogo = true
+    @State private var showDownload = true
     
     let defaultBaseUrl = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=1&style=5"
     
     var body: some View {
         NavigationStack {
             VStack {
-                Image("Icon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 300)
-                Text("welcome to")
-                    .font(Font.system(.title2).smallCaps())
-                Text("Bitmoji Downloader")
-                    .bold()
-                    .font(.title)
-                Text("Made by Yuhao in Santa Cruz")
-                    .font(.caption)
-                Divider()
-                Form {
-                    Section {
-                        
-                        TextField("Base URL:", text: $baseUrlString)
-                        Button("Restore to default") {
-                            baseUrlString = defaultBaseUrl
-                        }
-                        .disabled(baseUrlString == defaultBaseUrl)
+                if showLogo {
+                    Group {
+                        Image("Icon")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 300)
+                        Text("welcome to")
+                            .font(Font.system(.title2).smallCaps())
+                        Text("Bitmoji Downloader")
+                            .bold()
+                            .font(.title)
+                        Text("Made by Yuhao in Santa Cruz")
+                            .font(.caption)
+                        Divider()
                     }
                     
-                    Section {
-                        Picker("Parameters:", selection: $selectedParameter) {
-                            ForEach(BitmojiParameter.allCases) { parameter in
-                                Text(parameter.rawValue)
-                                    .tag(parameter)
+                }
+                
+                TabView {
+                    Form {
+                        Section {
+                            
+                            TextField("Base URL:", text: $baseUrlString)
+                            Button("Restore to default") {
+                                baseUrlString = defaultBaseUrl
+                            }
+                            .disabled(baseUrlString == defaultBaseUrl)
+                        }
+                        
+                        Section {
+                            Picker("Parameters:", selection: $selectedParameter) {
+                                ForEach(BitmojiParameter.allCases) { parameter in
+                                    Text(parameter.rawValue)
+                                        .tag(parameter)
+                                }
                             }
                         }
-                    }
-                    
-                    Section {
-                        TextField("Start Value:", value: $startValue, format: .number)
-                        TextField("End Value:", value: $endValue, format: .number)
-                    }
-                    
-                    Divider()
-                    
-                    Section {
-                        Button {
-                            saveLocation = showOpenPanel()
-                        } label: {
-                            Label("Save Location", systemImage: "folder")
+                        
+                        Section {
+                            TextField("Start Value:", value: $startValue, format: .number)
+                            TextField("End Value:", value: $endValue, format: .number)
                         }
-                        Text(saveLocation?.absoluteString ?? "")
-                            .font(.caption)
+                        
+                        Divider()
+                        
+                        Section {
+                            Button {
+                                saveLocation = showOpenPanel()
+                            } label: {
+                                Label("Save Location", systemImage: "folder")
+                            }
+                            Text(saveLocation?.absoluteString ?? "")
+                                .font(.caption)
 
+                        }
+                    }
+                    .onAppear {
+                        withAnimation {
+                            showLogo = true
+                            showDownload = true
+                        }
+                    }
+                    .padding()
+                    .tabItem {
+                        Label("Batch Downloader", systemImage: "square.and.arrow.down.on.square.fill")
+                    }
+                    
+                    // Log Editor
+                    VStack {
+                        
+                        if let wrappedLog = log {
+                            VStack(alignment: .leading) {
+                                
+                                Text("Information")
+                                    .font(.headline)
+                                
+                                if let absLogLocation = logLocation {
+                                    Divider()
+                                    
+                                    HStack {
+                                        Label {
+                                            Text("Path")
+                                        } icon: {
+                                            Image(systemName: "folder")
+                                                .foregroundColor(.blue)
+                                        }
+                                        Spacer()
+                                        Text(absLogLocation.absoluteString)
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                HStack {
+                                    Label {
+                                        Text("Valid Value")
+                                    } icon: {
+                                        Image(systemName: "checkmark.seal.fill")
+                                            .foregroundColor(.green)
+                                    }
+                                    Spacer()
+                                    if let validLog = wrappedLog.filter{ $0.valid == true } {
+                                        Text(String(validLog.count))
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                HStack {
+                                    Label {
+                                        Text("Invalid Value")
+                                    } icon: {
+                                        Image(systemName: "xmark.octagon.fill")
+                                            .foregroundColor(.red)
+                                    }
+                                    Spacer()
+                                    if let validLog = wrappedLog.filter{ $0.valid == false } {
+                                        Text(String(validLog.count))
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                Text("Filter")
+                                    .font(.headline)
+                                
+                                Toggle(isOn: $showValid) {
+                                    Text("Show Valid")
+                                }
+                                .disabled(!showInvalid)
+                                Toggle(isOn: $showInvalid) {
+                                    Text("Show Invalid")
+                                }
+                                .disabled(!showValid)
+                            }
+                            
+                            List(wrappedLog) { item in
+                                if ((item.valid && showValid) || (!item.valid && showInvalid)) {
+                                    Label(item.valid ? "\(item.id) is valid" : "\(item.id) invalid",
+                                          systemImage: item.valid ? "checkmark.seal.fill" : "exclamationmark.octagon.fill")
+                                    .foregroundColor(item.valid ? .green : .red)
+                                }
+                            }
+                            .frame(minHeight: 200)
+                        } else {
+                            Group {
+                                Spacer()
+                                Text("Import Log to Start")
+                                    .font(.title2)
+                                Spacer()
+                            }
+                        }
+                        Button {
+                            do {
+                                var prunedLog : [valueItem] = []
+                                
+                                if showValid && showInvalid {
+                                    prunedLog = log!
+                                } else if showValid {
+                                    prunedLog = log!.filter{ $0.valid == true}
+                                } else {
+                                    prunedLog = log!.filter{ $0.valid == false}
+                                }
+                                
+                                let jsonData = try JSONEncoder().encode(prunedLog)
+                                let savePath = showSaveJsonPanel()
+                                if let validPath = savePath {
+                                    try jsonData.write(to: validPath)
+                                }
+                            } catch {
+                                
+                            }
+                        } label: {
+                            Label("Prune Log", systemImage: "scissors")
+                        }
+                        .disabled(log == nil)
+                        
+                        Button {
+                            if let logURL = showOpenJsonPanel() {
+                                do {
+                                    logLocation = logURL
+                                    let data = try Data(contentsOf: logURL)
+                                    let jsonLog: [valueItem] = try! JSONDecoder().decode([valueItem].self, from: data)
+                                    log = jsonLog
+                                    print("3")
+                                } catch {
+                                    print("Failed to Open Log")
+                                }
+                            }
+                        } label: {
+                            Label("Import Log", systemImage: "square.and.arrow.down.fill")
+                        }
+                        
+                    }
+                    .padding()
+                    .tabItem {
+                        Label("Log Editor", systemImage: "doc.text")
+                    }
+                    .onAppear {
+                        withAnimation {
+                            showLogo = false
+                            showDownload = false
+                        }
                     }
                 }
             }
@@ -82,9 +244,10 @@ struct ContentView: View {
                         Image(systemName: "square.and.arrow.down")
                         Text("Start Download")
                     }
+                    .disabled(!showDownload)
                 }
             }
-            .frame(minWidth: 500, minHeight:  500)
+            .frame(minWidth: 500, minHeight:  650)
             .padding()
         }
     }
@@ -117,8 +280,7 @@ struct DownloadView: View {
             VStack(alignment: .leading) {
                 
                 Text("Information")
-                    .font(.title3)
-                    .bold()
+                    .font(.headline)
                 
                 Divider()
                 
@@ -344,6 +506,20 @@ func showSaveJsonPanel() -> URL? {
     return response == .OK ? savePanel.url : nil
 }
 
+func showOpenJsonPanel() -> URL? {
+    
+    let openPanel = NSOpenPanel()
+    openPanel.allowedContentTypes = [.json]
+    openPanel.canCreateDirectories = false
+    openPanel.canChooseDirectories = false
+    openPanel.isExtensionHidden = false
+    openPanel.title = "Open your log"
+    openPanel.message = "Choose the log to import."
+    
+    let response = openPanel.runModal()
+    return response == .OK ? openPanel.url : nil
+}
+
 // Get save directory and path from user (can't select file)
 func showOpenPanel() -> URL? {
     
@@ -392,13 +568,17 @@ func fetchImage(from url: URL) async throws -> NSImage {
     return image
 }
 
-struct valueItem : Identifiable, Encodable {
+struct Log : Decodable {
+    var parameter: BitmojiParameter
+    var items: [valueItem]
+}
+struct valueItem : Identifiable, Encodable, Decodable {
     let id: Int
     let valid: Bool
     let url: String?
 }
 
-enum BitmojiParameter : String, Identifiable, CaseIterable {
+enum BitmojiParameter : String, Identifiable, CaseIterable, Decodable {
     
     case Ear = "ear",
          Eye = "eye",
