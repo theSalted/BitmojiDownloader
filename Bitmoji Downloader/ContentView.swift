@@ -587,7 +587,10 @@ enum BitmojiParameter : String, Identifiable, CaseIterable, Decodable {
          Jaw = "jaw",
          Mouth = "mouth",
          Nose = "nose",
-         Pupil = "pupil"
+         Pupil = "pupil",
+         HairTone = "hair_tone",
+         Eyelash = "eyelash",
+         Brow = "brow"
     
     var id: String {self.rawValue}
 }
