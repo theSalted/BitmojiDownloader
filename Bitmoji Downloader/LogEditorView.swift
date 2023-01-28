@@ -9,9 +9,6 @@ import SwiftUI
 
 struct LogEditorView: View {
     @EnvironmentObject var settings: DownloadSettings
-    @State private var logLocation : URL?
-    @State private var showingValid = true
-    @State private var showingInvalid = true
     var body: some View {
         VStack {
             if let wrappedLog = settings.log {
@@ -20,7 +17,7 @@ struct LogEditorView: View {
                     Text("Information")
                         .font(.headline)
                     
-                    if let absLogLocation = logLocation {
+                    if let absLogLocation = settings.logLocation {
                         Divider()
                         InformationLabel(labelText: "Path", systemName: "folder", bodyText: absLogLocation.absoluteString, color: .blue)
                     }
@@ -40,18 +37,18 @@ struct LogEditorView: View {
                     Text("Filter")
                         .font(.headline)
                     
-                    Toggle(isOn: $showingValid) {
+                    Toggle(isOn: $settings.showingValid) {
                         Text("Show Valid")
                     }
-                    .disabled(!showingInvalid)
-                    Toggle(isOn: $showingInvalid) {
+                    .disabled(!settings.showingInvalid)
+                    Toggle(isOn: $settings.showingInvalid) {
                         Text("Show Invalid")
                     }
-                    .disabled(!showingValid)
+                    .disabled(!settings.showingValid)
                 }
                 
                 List(wrappedLog) { item in
-                    if ((item.valid && showingValid) || (!item.valid && showingInvalid)) {
+                    if ((item.valid && settings.showingValid) || (!item.valid && settings.showingInvalid)) {
                         Label(item.valid ? "\(item.id) is valid" : "\(item.id) invalid",
                               systemImage: item.valid ? "checkmark.seal.fill" : "exclamationmark.octagon.fill")
                         .foregroundColor(item.valid ? .green : .red)
@@ -70,9 +67,9 @@ struct LogEditorView: View {
                 do {
                     var prunedLog : [valueItem] = []
                     
-                    if showingValid && showingInvalid {
+                    if settings.showingValid && settings.showingInvalid {
                         prunedLog = settings.log!
-                    } else if showingValid {
+                    } else if settings.showingValid {
                         prunedLog = settings.log!.filter{ $0.valid == true}
                     } else {
                         prunedLog = settings.log!.filter{ $0.valid == false}
@@ -94,11 +91,10 @@ struct LogEditorView: View {
             Button {
                 if let logURL = showOpenJsonPanel() {
                     do {
-                        logLocation = logURL
+                        settings.logLocation = logURL
                         let data = try Data(contentsOf: logURL)
                         let jsonLog: [valueItem] = try! JSONDecoder().decode([valueItem].self, from: data)
                         settings.log = jsonLog
-                        print("3")
                     } catch {
                         print("Failed to Open Log")
                     }

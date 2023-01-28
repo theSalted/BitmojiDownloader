@@ -22,7 +22,6 @@ struct ContentView: View {
                 
                 TabView {
                     BatchDownloadSettingsView()
-                    
                     LogEditorView()
                 }
             }
@@ -32,28 +31,30 @@ struct ContentView: View {
                 ToolbarItem(id: "download", placement: .primaryAction) {
                     
                     NavigationLink {
-                        DownloadView(settings: settings, saveDirectory: $settings.saveDirectory)
+                        DownloadView()
                     } label: {
                         Image(systemName: "square.and.arrow.down")
                         Text("Start Download")
                     }
                     .disabled(!settings.showingDownloadButton)
+                    .disabled((settings.selectedMode == DownloadMode.Log) && (settings.log == nil))
                 }
             }
-            .frame(minWidth: 500, minHeight:  650)
+            .frame(minWidth: 500, minHeight:  600)
             .padding()
         }
         .environmentObject(settings)
     }
 }
 
+/// Display Logo and copyright information
 struct LogoView: View {
     var body: some View {
         Group {
             Image("Icon")
                 .resizable()
                 .scaledToFit()
-                .frame(maxHeight: 300)
+                .frame(maxHeight: 170)
             Text("welcome to")
                 .font(Font.system(.title2).smallCaps())
             Text("Bitmoji Downloader")
@@ -66,6 +67,7 @@ struct LogoView: View {
     }
 }
 
+/// A custom label displaying two texts and icon
 struct InformationLabel: View {
     var labelText : String
     var systemName : String

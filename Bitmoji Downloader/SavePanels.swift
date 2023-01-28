@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 
 // Get save directory and path from user
+/// Show a save panel for saving PNG
 func showSavePanel() -> URL? {
     
     let savePanel = NSSavePanel()
@@ -24,6 +25,7 @@ func showSavePanel() -> URL? {
 }
 
 // Get save directory and path from user
+// Show a save 
 func showSaveJsonPanel() -> URL? {
     
     let savePanel = NSSavePanel()

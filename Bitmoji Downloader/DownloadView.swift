@@ -9,53 +9,49 @@ import SwiftUI
 
 struct DownloadView: View {
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
-    @State private var tasksCompleted = 0.0
-    @State private var taskCompleteCount = 0
+    
+    @EnvironmentObject var settings: DownloadSettings
+    
+    @State private var totalTasks = 1
+    @State private var tasksCompleted = 0
     @State private var succeedCount = 0
     @State private var failedCount = 0
     @State private var valueLog : [valueItem] = []
     @State private var isBatchComplete = false
     @State private var isSFXEnable = true
     
-    @Binding var saveDirectory: URL?
-    var parameter: String
-    var startValue: Int
-    var endValue: Int
-    var baseUrlString: String
-    
-    init(settings: DownloadSettings, saveDirectory: Binding<URL?>) {
-        self.parameter = settings.selectedParameter.rawValue
-        self.startValue = settings.startValue
-        self.endValue = settings.endValue
-        self.baseUrlString = settings.textfieldUrlString
-        self._saveDirectory = saveDirectory
-    }
-    
-    
     var body: some View {
         VStack {
-            ProgressView(value: tasksCompleted, total: Double(endValue - startValue))
+            ProgressView(value: (Double(tasksCompleted)/Double(totalTasks)), total: 1.0)
             
             VStack(alignment: .leading) {
                 
                 Text("Information")
                     .font(.headline)
-                
-                Divider()
-                
-                InformationLabel(labelText: "Completion", systemName: "circle.dashed", bodyText: "(\(taskCompleteCount)/\(endValue))", color: .blue)
-                
-                Divider()
-                
-                InformationLabel(labelText: "Succeed", systemName: "checkmark.seal.fill", bodyText: String(succeedCount), color: .green)
-                
-                Divider()
-                
-                InformationLabel(labelText: "Failed", systemName: "exclamationmark.octagon.fill", bodyText: String(failedCount), color: .red)
-                
-                Divider()
-                
-                InformationLabel(labelText: "Parameter", systemName: "slider.horizontal.3", bodyText: String(parameter), color: .yellow)
+                Group {
+                    Divider()
+                    InformationLabel(labelText: "Completion", systemName: "circle.dashed", bodyText: "(\(tasksCompleted)/\(totalTasks))", color: .blue)
+                }
+                Group {
+                    Divider()
+                    InformationLabel(labelText: "Succeed", systemName: "checkmark.seal.fill", bodyText: String(succeedCount), color: .green)
+                }
+                Group {
+                    Divider()
+                    InformationLabel(labelText: "Failed", systemName: "exclamationmark.octagon.fill", bodyText: String(failedCount), color: .red)
+                }
+                Group {
+                    Divider()
+                    InformationLabel(labelText: "Parameter", systemName: "slider.horizontal.3", bodyText: String(settings.selectedParameter.rawValue), color: .primary)
+                }
+                Group {
+                    Divider()
+                    InformationLabel(labelText: "Save Path", systemName: "folder", bodyText: settings.saveDirectory?.absoluteString ?? "", color: .primary)
+                }
+                Group {
+                    Divider()
+                    InformationLabel(labelText: "Download Mode", systemName: "filemenu.and.selection", bodyText: settings.selectedMode.rawValue, color: .primary)
+                }
                 
             }
             List{
@@ -92,11 +88,11 @@ struct DownloadView: View {
             
             HStack {
                 Button {
-                    NSWorkspace.shared.open(saveDirectory!)
+                    NSWorkspace.shared.open(settings.saveDirectory!)
                 } label: {
                     Label("Show In Finder", systemImage: "folder")
                 }
-                .disabled(saveDirectory == nil)
+                .disabled(settings.saveDirectory == nil)
                 Spacer()
             }
             
@@ -133,34 +129,100 @@ struct DownloadView: View {
         }
         .task {
             
-            let saveLocation = saveDirectory ?? showOpenPanel() ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
-            saveDirectory = saveLocation
+            let saveLocation = settings.saveDirectory ?? showOpenPanel() ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+            settings.saveDirectory = saveLocation
             
-            for value in startValue...endValue {
-                taskCompleteCount = value
-                do {
-                    guard let downloadURL = URL(string: baseUrlString + "&\(parameter)=\(value)") else {
-                        throw FetchImageError.invalidURL
+            switch settings.selectedMode {
+            case .Range:
+                print("Range Downloading")
+                totalTasks = settings.endValue - settings.startValue
+                for value in settings.startValue...settings.endValue {
+                    do {
+                        guard let downloadURL = URL(string: settings.textfieldUrlString + "&\(settings.selectedParameter.rawValue)=\(value)") else {
+                            throw FetchImageError.invalidURL
+                        }
+                        
+                        guard let saveURL = URL(string: saveLocation.absoluteString + "\(settings.selectedParameter.rawValue)_\(value).png") else {
+                            throw FetchImageError.invalidURL
+                        }
+                        
+                        let fetchedImage = try await fetchImage(from: downloadURL)
+                        savePNG(image: fetchedImage, path: saveURL)
+                        
+                        valueLog.append(valueItem(id: value, valid: true, url: downloadURL.absoluteString))
+                        succeedCount += 1
+                        
+                    } catch {
+                        valueLog.append(valueItem(id: value, valid: false, url: nil))
+                        failedCount += 1
                     }
                     
-                    guard let saveURL = URL(string: saveLocation.absoluteString + "\(parameter)_\(value).png") else {
-                        throw FetchImageError.invalidURL
+                    if tasksCompleted <= (totalTasks - 1) {
+                        tasksCompleted += 1
                     }
                     
-                    let fetchedImage = try await fetchImage(from: downloadURL)
-                    savePNG(image: fetchedImage, path: saveURL)
+                }
+            case .Log:
+                print("Log Downloading")
+                if let unwrappedLog = settings.log {
+                    var log : [valueItem]
                     
-                    valueLog.append(valueItem(id: value, valid: true, url: downloadURL.absoluteString))
-                    succeedCount += 1
+                    if settings.downloadingValidOnly {
+                        log = unwrappedLog.filter{ $0.valid == true }
+                    } else if settings.downloadingInValidOnly {
+                        log = unwrappedLog.filter{ $0.valid == false }
+                    } else {
+                        log = unwrappedLog
+                    }
                     
-                } catch {
-                    valueLog.append(valueItem(id: value, valid: false, url: nil))
-                    failedCount += 1
+                    totalTasks = log.count
+                    
+                    for logItem in log {
+                        
+                        do {
+                            var downloadURL : URL
+                            
+                            if settings.downloadWithLink {
+                                if let unwrappedURL = URL(string: logItem.url ?? "") {
+                                    downloadURL = unwrappedURL
+                                } else {
+                                    throw FetchImageError.invalidURL
+                                }
+                            } else {
+                                if let unwrappedURL = URL(string: settings.textfieldUrlString + "&\(settings.selectedParameter.rawValue)=\(logItem.id)") {
+                                    downloadURL = unwrappedURL
+                                } else {
+                                    throw FetchImageError.invalidURL
+                                }
+                            }
+                            
+                            guard let saveURL = URL(string: saveLocation.absoluteString + "\(settings.selectedParameter.rawValue)_\(logItem.id).png") else {
+                                throw FetchImageError.invalidURL
+                            }
+                            
+                            let fetchedImage = try await fetchImage(from: downloadURL)
+                            savePNG(image: fetchedImage, path: saveURL)
+                            valueLog.append(valueItem(id: logItem.id, valid: true, url: downloadURL.absoluteString))
+                            succeedCount += 1
+                            
+                        } catch {
+                            valueLog.append(valueItem(id: logItem.id, valid: false, url: nil))
+                            failedCount += 1
+                        }
+                        
+                        if tasksCompleted <= (totalTasks - 1) {
+                            print("test complete")
+                            tasksCompleted += 1
+                        }
+                    }
+                    
+                    
+                } else {
+                    print("NO LOG!!!")
                 }
                 
-                if tasksCompleted < Double(endValue - startValue) {
-                    tasksCompleted += 1
-                }
+            case .Color:
+                print("Coming soon")
             }
             if isSFXEnable {
                 NSSound(named: "Funk")?.play()

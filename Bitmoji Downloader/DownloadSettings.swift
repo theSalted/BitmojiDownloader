@@ -14,11 +14,18 @@ final class DownloadSettings : ObservableObject {
     @Published var textfieldUrlString = "https://preview.bitmoji.com/avatar-builder-v3/preview/hair?scale=3&gender=1&style=5"
     @Published var saveDirectory : URL?
     @Published var selectedParameter = BitmojiParameter.Nose
+    @Published var selectedMode = DownloadMode.Range
     @Published var startValue = 0
     @Published var endValue = 9999
     @Published var log : [valueItem]?
     @Published var showingLogo = true
     @Published var showingDownloadButton = true
+    @Published var logLocation : URL?
+    @Published var showingValid = true
+    @Published var showingInvalid = true
+    @Published var downloadingValidOnly = false
+    @Published var downloadingInValidOnly = false
+    @Published var downloadWithLink = false
 }
 
 struct valueItem : Identifiable, Encodable, Decodable {
