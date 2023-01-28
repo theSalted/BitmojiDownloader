@@ -16,8 +16,10 @@ struct BatchDownloadSettingsView: View {
             Section {
                 Picker("Download Mode", selection: $settings.selectedMode) {
                     ForEach(DownloadMode.allCases) { mode in
-                        Text(mode.rawValue)
-                            .tag(mode)
+                        if mode != DownloadMode.Color {
+                            Text(mode.rawValue)
+                                .tag(mode)
+                        }
                     }
                 }
             }
