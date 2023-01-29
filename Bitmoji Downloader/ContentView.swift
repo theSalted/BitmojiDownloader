@@ -38,6 +38,8 @@ struct ContentView: View {
                     }
                     .disabled(!settings.showingDownloadButton)
                     .disabled((settings.selectedMode == DownloadMode.Log) && (settings.log == nil))
+                    .disabled((settings.selectedMode == DownloadMode.Color) && (!settings.selectedParameter.isTone()))
+                    .disabled((settings.selectedMode == DownloadMode.Color) && settings.hexStrings.isEmpty)
                 }
             }
             .frame(minWidth: 500, minHeight:  600)

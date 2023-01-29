@@ -222,7 +222,37 @@ struct DownloadView: View {
                 }
                 
             case .Color:
-                print("Coming soon")
+                print("Tone Downloading")
+                totalTasks = settings.hexStrings.count
+                for hex in settings.hexStrings {
+                    print(hex)
+                    let rawHex = hex.dropFirst()
+                    if let rawDec = Int(rawHex, radix: 16) {
+                        do {
+                            guard let downloadURL = URL(string: settings.textfieldUrlString + "&\(settings.selectedParameter.rawValue)=\(rawDec)") else {
+                                throw FetchImageError.invalidURL
+                            }
+                            
+                            guard let saveURL = URL(string: saveLocation.absoluteString + "\(settings.selectedParameter.rawValue)_\(rawDec).png") else {
+                                throw FetchImageError.invalidURL
+                            }
+                            
+                            let fetchedImage = try await fetchImage(from: downloadURL)
+                            savePNG(image: fetchedImage, path: saveURL)
+                            
+                            valueLog.append(valueItem(id: rawDec, valid: true, url: downloadURL.absoluteString))
+                            succeedCount += 1
+                            
+                        } catch {
+                            valueLog.append(valueItem(id: rawDec, valid: false, url: nil))
+                            failedCount += 1
+                        }
+                        
+                        if tasksCompleted <= (totalTasks - 1) {
+                            tasksCompleted += 1
+                        }
+                    }
+                }
             }
             if isSFXEnable {
                 NSSound(named: "Funk")?.play()

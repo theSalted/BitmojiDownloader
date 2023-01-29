@@ -16,10 +16,8 @@ struct BatchDownloadSettingsView: View {
             Section {
                 Picker("Download Mode", selection: $settings.selectedMode) {
                     ForEach(DownloadMode.allCases) { mode in
-                        if mode != DownloadMode.Color {
-                            Text(mode.rawValue)
-                                .tag(mode)
-                        }
+                        Text(mode.rawValue)
+                            .tag(mode)
                     }
                 }
             }
@@ -35,9 +33,20 @@ struct BatchDownloadSettingsView: View {
             Section {
                 Picker("Parameters:", selection: $settings.selectedParameter) {
                     ForEach(BitmojiParameter.allCases) { parameter in
-                        Text(parameter.rawValue)
-                            .tag(parameter)
+                        
+                        switch settings.selectedMode {
+                        case .Color:
+                            if parameter.isTone() {
+                                Text(parameter.rawValue)
+                                    .tag(parameter)
+                            }
+                            
+                        default:
+                            Text(parameter.rawValue)
+                                .tag(parameter)
+                        }
                     }
+                    
                 }
             }
             
@@ -91,7 +100,53 @@ struct BatchDownloadSettingsView: View {
                         .font(.caption)
                 }
             case .Color:
-                Text("Coming Soon")
+                Section {
+                    Picker("Tone Template", selection: $settings.selecredColorTemplate) {
+                        ForEach(ColorTemplate.allCases) { template in
+                            Text(template.rawValue)
+                                .tag(template)
+                        }
+                    }
+                    .onChange(of: settings.selecredColorTemplate) { newValue in
+                        if settings.selecredColorTemplate != ColorTemplate.None {
+                            settings.hexStrings = settings.selecredColorTemplate.getTemplate()
+                        }
+                    }
+                    .onChange(of: settings.hexStrings) { newValue in
+                        if settings.hexStrings != settings.selecredColorTemplate.getTemplate() {
+                            settings.selecredColorTemplate = ColorTemplate.None
+                        }
+                    }
+                }
+                Section {
+                    TextField("Tone", text: $settings.newColor)
+                        .onSubmit {
+                            let hex = settings.newColor
+                            if (hex.hasPrefix("#") && hex.count == 7 && !settings.hexStrings.contains(hex.uppercased())) {
+                                let rawHex = hex.dropFirst()
+                                if let rawDec = Int(rawHex, radix: 16) {
+                                    print(rawDec)
+                                    settings.hexStrings.append(settings.newColor.uppercased())
+                                }
+                            }
+                        }
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(settings.hexStrings, id: \.self) { hex in
+                                Button {
+                                    settings.hexStrings = settings.hexStrings.filter { $0 != hex }
+                                } label: {
+                                    let color = hexStringToUIColor(hex: hex)
+                                    Label(hex, systemImage: "circle.fill")
+                                        .foregroundColor(color)
+                                }
+                            }
+                        }
+                    }
+                }
+                .onAppear {
+                    settings.selectedParameter = BitmojiParameter.HairTone
+                }
             }
             
             
@@ -119,6 +174,27 @@ struct BatchDownloadSettingsView: View {
             Label("Batch Downloader", systemImage: "square.and.arrow.down.on.square.fill")
         }
     }
+}
+
+func hexStringToUIColor (hex:String) -> Color {
+    var cString:String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+
+    if (cString.hasPrefix("#")) {
+        cString.remove(at: cString.startIndex)
+    }
+
+    if ((cString.count) != 6) {
+        return Color.gray
+    }
+
+    var rgbValue:UInt64 = 0
+    Scanner(string: cString).scanHexInt64(&rgbValue)
+
+    return Color(
+        red: CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0,
+        green: CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0,
+        blue: CGFloat(rgbValue & 0x0000FF) / 255.0
+    )
 }
 
 enum DownloadMode : String, Identifiable, CaseIterable {
